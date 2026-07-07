@@ -26,7 +26,8 @@ builder.Services.AddCors(options =>
                 "http://localhost:5173",
                 "https://localhost:5173",
                 "http://127.0.0.1:5173",
-                "https://127.0.0.1:5173")
+                "https://127.0.0.1:5173",
+                "https://localhost:7012")
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
@@ -65,35 +66,51 @@ builder.Services.AddAuthentication(options =>
         ClockSkew = TimeSpan.FromSeconds(30),
         NameClaimType = ClaimTypes.NameIdentifier,
         RoleClaimType = ClaimTypes.Role
+        //NameClaimType = "sub",
+        //RoleClaimType = "role"
     };
 
     options.Events = new JwtBearerEvents
     {
         OnMessageReceived = ctx =>
         {
-            var authorization = ctx.Request.Headers["Authorization"].ToString();
-            var token = ctx.Request.Headers["Authorization"].ToString()?.StartsWith("Bearer ") == true
-                ? ctx.Request.Headers["Authorization"].ToString().Substring("Bearer ".Length)
-                : ctx.Request.Headers["Authorization"].ToString();
-            Console.WriteLine($"[JWT] OnMessageReceived Authorization: {authorization}");
-            Console.WriteLine($"[JWT] OnMessageReceived Token: {token}");
+            var logger = ctx.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+            var authHeader = ctx.Request.Headers["Authorization"].ToString();
+
+            logger.LogInformation("=== [JWT DEBUG - OnMessageReceived] ===");
+            logger.LogInformation($"Auth Header Present: {!string.IsNullOrEmpty(authHeader)}");
+            logger.LogInformation($"Auth Header Value: '{authHeader}'");
+
+            if (!string.IsNullOrEmpty(authHeader))
+            {
+                logger.LogInformation($"Auth Header Length: {authHeader.Length}");
+                logger.LogInformation($"Starts with 'Bearer ': {authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)}");
+            }
+
             return Task.CompletedTask;
         },
         OnTokenValidated = ctx =>
         {
+            var logger = ctx.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
             var userId = ctx.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var role = ctx.Principal?.FindFirst(ClaimTypes.Role)?.Value;
-            Console.WriteLine($"[JWT] Token validated for UserId={userId}, Role={role}");
+
+            logger.LogInformation("=== [JWT DEBUG - OnTokenValidated] ===");
+            logger.LogInformation($"✓ Token PASSED validation!");
+            logger.LogInformation($"UserId: {userId}");
+            logger.LogInformation($"Role: {role}");
+
             return Task.CompletedTask;
         },
         OnAuthenticationFailed = ctx =>
         {
-            Console.WriteLine($"[JWT] Authentication failed: {ctx.Exception?.Message}");
-            return Task.CompletedTask;
-        },
-        OnChallenge = ctx =>
-        {
-            Console.WriteLine($"[JWT] Challenge: Error={ctx.Error}, Description={ctx.ErrorDescription}");
+            var logger = ctx.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+
+            logger.LogInformation("=== [JWT DEBUG - OnAuthenticationFailed] ===");
+            logger.LogError($"Exception Type: {ctx.Exception?.GetType().Name}");
+            logger.LogError($"Exception Message: {ctx.Exception?.Message}");
+            logger.LogError($"Inner Exception: {ctx.Exception?.InnerException?.Message}");
+
             return Task.CompletedTask;
         }
     };
@@ -106,6 +123,7 @@ builder.Services.AddScoped<NFSCCard.Services.IAuthService, NFSCCard.Services.Aut
 builder.Services.AddScoped<NFSCCard.Services.ICustomerService, NFSCCard.Services.CustomerService>();
 
 builder.Services.AddAuthorization();
+builder.Services.AddLogging(logging => logging.AddConsole());
 
 var app = builder.Build();
 

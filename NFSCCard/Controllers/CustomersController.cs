@@ -1,10 +1,11 @@
+using Dapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NFSCCard.DTOs.Customer;
 using NFSCCard.Services;
-using Dapper;
-using System.Security.Claims;
+using System.Data;
 using System.Linq;
+using System.Security.Claims;
 
 namespace NFSCCard.Controllers
 {
@@ -72,7 +73,7 @@ namespace NFSCCard.Controllers
         }
 
         [HttpPost]
-        //[Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create([FromBody] CustomerDto dto)
         {
             var parameters = new DynamicParameters();
