@@ -72,10 +72,58 @@ namespace NFSCCard.Controllers
             return Ok(customer);
         }
 
+        //[HttpPost]
+        //[Authorize(Roles = "Admin")]
+        //public async Task<IActionResult> Create([FromBody] CustomerDto dto)
+        //{
+        //    var parameters = new DynamicParameters();
+        //    parameters.Add("@CustomerId", 0);
+        //    parameters.Add("@UserId", dbType: System.Data.DbType.Int32, value: null);
+        //    parameters.Add("@FirstName", dto.FirstName);
+        //    parameters.Add("@LastName", dto.LastName);
+        //    parameters.Add("@Email", dto.Email);
+        //    parameters.Add("@PhoneNumber", dto.PhoneNumber);
+        //    parameters.Add("@WhatsAppNumber", dto.WhatsAppNumber);
+        //    parameters.Add("@CompanyName", dto.CompanyName);
+        //    parameters.Add("@JobTitle", dto.JobTitle);
+        //    parameters.Add("@Website", dto.Website);
+        //    parameters.Add("@Instagram", dto.Instagram);
+        //    parameters.Add("@LinkedIn", dto.LinkedIn);
+        //    parameters.Add("@Facebook", dto.Facebook);
+        //    parameters.Add("@Bio", dto.Bio);
+        //    parameters.Add("@ProfileImageUrl", dto.ProfileImageUrl);
+        //    parameters.Add("@PasswordHash", dto.PasswordHash);
+
+        //    await _svc.SaveAsync(parameters);
+        //    return Ok(dto);
+        //}
+
         [HttpPost]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Create([FromBody] CustomerDto dto)
+        public async Task<IActionResult> Create([FromForm] CustomerDto dto)
         {
+            string profileImageUrl = null;
+
+            if (dto.ProfileImage != null)
+            {
+                var uploadFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "ProfileImages");
+
+                if (!Directory.Exists(uploadFolder))
+                {
+                    Directory.CreateDirectory(uploadFolder);
+                }
+
+                var fileName = Guid.NewGuid().ToString() + Path.GetExtension(dto.ProfileImage.FileName);
+                var filePath = Path.Combine(uploadFolder, fileName);
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await dto.ProfileImage.CopyToAsync(stream);
+                }
+
+                profileImageUrl = "/ProfileImages/" + fileName;
+            }
+
             var parameters = new DynamicParameters();
             parameters.Add("@CustomerId", 0);
             parameters.Add("@UserId", dbType: System.Data.DbType.Int32, value: null);
@@ -91,11 +139,15 @@ namespace NFSCCard.Controllers
             parameters.Add("@LinkedIn", dto.LinkedIn);
             parameters.Add("@Facebook", dto.Facebook);
             parameters.Add("@Bio", dto.Bio);
-            parameters.Add("@ProfileImageUrl", dto.ProfileImageUrl);
-            parameters.Add("@PasswordHash", dto.PasswordHash);
+            parameters.Add("@ProfileImageUrl", profileImageUrl);
+            parameters.Add("@PasswordHash", "AQAAAAIAAYagAAAAECXDjcHEzlgOaribgW52aZhh0vRfLku0m97vXYixvOsjND3vRNsBz6hP5ul+sZrb2Q==");
 
             await _svc.SaveAsync(parameters);
-            return Ok(dto);
+
+            return Ok(new
+            {
+                Message = "Customer created successfully."
+            });
         }
 
         [HttpPut("{id:int}")]

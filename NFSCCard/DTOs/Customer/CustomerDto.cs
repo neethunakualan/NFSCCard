@@ -24,5 +24,6 @@ namespace NFSCCard.DTOs.Customer
         public bool IsActive { get; set; }
         public DateTime CreatedDate { get; set; }
         public DateTime? UpdatedDate { get; set; }
+        public IFormFile ProfileImage { get; set; }
     }
 }
